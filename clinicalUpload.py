@@ -23,7 +23,7 @@ def main():
 	st.set_page_config(page_title="Team 2 Hackathon Consumer Accelerator")
 	status=st.empty()
 	menu = ["Upload","Download","About"]
-	
+
 	#get session/connection values / set defaults
 	qparams=st.experimental_get_query_params();
 	if 'qparams' not in st.session_state:
@@ -46,6 +46,7 @@ def main():
 		st.session_state.contextSet=False
 		st.session_state.connected=False
 		st.session_state.qparams=True
+	if 'session' in st.session_state.keys():	session = Session.builder.configs(st.session_state.session).create()
 
 	tab1,tab2,tab3,tab4,tab5 = st.tabs(["Upload to Table", "Upload to Stage", "Download Table","Download File","About"])
 
@@ -65,6 +66,7 @@ def main():
 					st.session_state.warehouse=warehouse
 					st.session_state.role=session.get_current_role().replace('"','')
 					st.session_state.connected=True
+					st.session_state.session=session_parameters
 					showStatusMsg(status,"Logged in Successfully as user ' "+session_parameters['user']+"'",True)
 				except Exception as e:
 					st.session_state.connected=False
@@ -72,25 +74,36 @@ def main():
 
 	with st.sidebar.expander("CONTEXT"):
 		with st.form("context_form"):
-			role=st.text_input("role:",st.session_state.role)
+			if st.session_state.connected:
+				role=st.text_input("role:",st.session_state.role)
 
-			obj_list = session.sql("show databases").select('"name"').filter((F.col('"name"') != 'SNOWFLAKE') & (F.col('"name"') != 'SNOWFLAKE_SAMPLE_DATA')).collect()
-			st.write(obj_list)
+				databases = session.sql("show databases").select('"name"').filter((F.col('"name"') != 'SNOWFLAKE') & (F.col('"name"') != 'SNOWFLAKE_SAMPLE_DATA')).collect()
+				st.write(databases)
 
-			database=st.text_input("database:",st.session_state.database)
-			schema=st.text_input("schema:",st.session_state.schema)
-			stage=st.text_input("stage:",st.session_state.stage)
-			do_context=st.form_submit_button(label="Set Context")
-			if do_context:
-				st.session_state.role=role
-				st.session_state.database=database
-				st.session_state.schema=schema
-				st.session_state.stage=stage
-				st.session_state.contextSet=True
-				showStatusMsg(status,"Context Set",True)
+				database=st.text_input("database:","hackathon")
+
+				schemas = session.sql("show schemas").select('"name"').collect()
+				st.write(schemas)
+
+				schema=st.text_input("schema:","Public")
+
+				stages = session.sql("show stages").select('"name"').collect()
+				st.write(stages)
+
+				stage=st.text_input("stage:","Uploaded Files")
+				do_context=st.form_submit_button(label="Set Context")
+				if do_context:
+					st.session_state.role=role
+					st.session_state.database=database
+					st.session_state.schema=schema
+					st.session_state.stage=stage
+					st.session_state.contextSet=True
+					showStatusMsg(status,"Context Set",True)
+			else:
+				st.write("Create Connection First")
 
 	st.sidebar.image(HDIR+"snowflakeLogo.jpg", use_column_width=True)
-	
+
 	with tab1:
 		st.subheader("Upload File into Snowflake Table")
 		file1 = st.file_uploader("Upload File",
@@ -146,7 +159,7 @@ def main():
 	with tab3:
 		st.subheader("Download Table from Snowflake")
 		st.write("Under Construction")
-	
+
 	with tab4:
 		st.subheader("Download File from Snowflake Stage")
 		st.write("Under Construction")
@@ -176,8 +189,8 @@ if __name__ == "__main__":
 		main()
 	finally:
 		#close all connections?
-		connection = None 
-		if connection !=None: 
+		connection = None
+		if connection !=None:
 			connection.close()
 
- 
+
