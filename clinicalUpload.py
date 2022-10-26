@@ -13,7 +13,7 @@ from PIL import Image
 
 
 # home path to files (images)
-HDIR="."
+HDIR="./"
 
 def main():
 	global HDIR
