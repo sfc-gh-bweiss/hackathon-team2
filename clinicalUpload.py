@@ -4,6 +4,8 @@
 #pip install --upgrade streamlit
 import streamlit as st
 from snowflake.snowpark.session import Session
+#from snowflake.snowpark.dataframe import DataFrame
+import snowflake.snowpark.functions as F
 import pandas as pd
 import time
 import numpy as np
@@ -17,12 +19,12 @@ HDIR="./"
 
 def main():
 	global HDIR
-	connection=None
+	session=None
 	st.set_page_config(page_title="Team 2 Hackathon Consumer Accelerator")
 	status=st.empty()
 	menu = ["Upload","Download","About"]
 	
-	#get connection values / set defaults
+	#get session/connection values / set defaults
 	qparams=st.experimental_get_query_params();
 	if 'qparams' not in st.session_state:
 		if 'account' in qparams.keys(): st.session_state.account=qparams.get('account')[0]
@@ -52,27 +54,34 @@ def main():
 			account=st.text_input("account url:",st.session_state.account)
 			user=st.text_input("username:",st.session_state.user)
 			password=st.text_input("password:",key="password",type="password")
+			warehouse=st.text_input("warehouse:",st.session_state.warehouse)
 			do_connect=st.form_submit_button(label="Connect")
 			if do_connect:
 				try:
-					connection_parameters={'account':account,'user':user,'password':password}
-					connection = Session.builder.configs(connection_parameters).create()
+					session_parameters={'account':account,'user':user,'password':password,'warehouse':warehouse}
+					session = Session.builder.configs(session_parameters).create()
+					st.session_state.account=account
+					st.session_state.user=user
+					st.session_state.warehouse=warehouse
+					st.session_state.role=session.get_current_role().replace('"','')
 					st.session_state.connected=True
-					showStatusMsg(status,"Logged in Successfully as user ' "+connection_parameters['user']+"'",True)
+					showStatusMsg(status,"Logged in Successfully as user ' "+session_parameters['user']+"'",True)
 				except Exception as e:
 					st.session_state.connected=False
 					showStatusMsg(status,"Unable to Login, check your settings: " + str(e),False)
 
 	with st.sidebar.expander("CONTEXT"):
 		with st.form("context_form"):
-			warehouse=st.text_input("warehouse:",st.session_state.warehouse)
 			role=st.text_input("role:",st.session_state.role)
+
+			obj_list = session.sql("show databases").select('"name"').filter((F.col('"name"') != 'SNOWFLAKE') & (F.col('"name"') != 'SNOWFLAKE_SAMPLE_DATA')).collect()
+			st.write(obj_list)
+
 			database=st.text_input("database:",st.session_state.database)
 			schema=st.text_input("schema:",st.session_state.schema)
 			stage=st.text_input("stage:",st.session_state.stage)
 			do_context=st.form_submit_button(label="Set Context")
 			if do_context:
-				st.session_state.warehouse=warehouse
 				st.session_state.role=role
 				st.session_state.database=database
 				st.session_state.schema=schema
