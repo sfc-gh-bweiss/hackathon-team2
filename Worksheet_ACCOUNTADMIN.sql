@@ -1,0 +1,9 @@
+create role hackathon;
+create user hackathon password='h!ghatt' default_role = hackathon;
+grant role hackathon to user hackathon;
+create or replace database CLINICAL_SUBMISSIONS;
+REVOKE ALL PRIVILEGES ON DATABASE CLINICAL_SUBMISSIONS FROM ROLE ACCOUNTADMIN;
+GRANT OWNERSHIP ON DATABASE CLINICAL_SUBMISSIONS TO ROLE hackathon;
+GRANT ALL PRIVILEGES ON DATABASE CLINICAL_SUBMISSIONS TO ROLE hackathon;
+GRANT ALL PRIVILEGES ON SCHEMA CLINICAL_SUBMISSIONS.Public TO ROLE hackathon;
+GRANT OPERATE ON WAREHOUSE demo_wh TO ROLE hackathon;
