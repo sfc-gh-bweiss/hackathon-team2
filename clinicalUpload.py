@@ -194,7 +194,7 @@ def main():
 						if st.button("Upload to Stage"):
 							try:
 								session.use_schema(st.session_state.schema)
-								session.file.put(file2, "@"+stagename)
+								session.file.put(file2.getValue(), "@"+stagename)
 								showStatusMsg(status,msg,True)
 							except Exception as e:
 								showStatusMsg(status,"Unable to Save File to Stage: " + str(e),False)
