@@ -21,7 +21,6 @@ def main():
 	session=None
 	st.set_page_config(page_title="Team 2 Hackathon Consumer Accelerator")
 	status=st.empty()
-	menu = ["Upload","Download","About"]
 
 	#get session/connection values / set defaults
 	qparams=st.experimental_get_query_params();
@@ -47,7 +46,7 @@ def main():
 		st.session_state.qparams=True
 	if 'session' in st.session_state.keys():	session = Session.builder.configs(st.session_state.session).create()
 
-	tab1,tab2,tab3,tab4,tab5 = st.tabs(["Upload to Table", "Upload to Stage", "View Table","Download File","About"])
+	tab1,tab2,tab3,tab4,tab5 = st.tabs(["Upload to Table", "Upload to Stage", "View Table","Download File","About Team#2"])
 
 	with st.sidebar.expander("CONNECTION"):
 		#account=st.text_input("account:",st.session_state.account)
@@ -119,56 +118,56 @@ def main():
 		file1 = st.file_uploader("Upload File",
 			type=["xlsx","xls","csv"],key="file1",label_visibility="hidden")
 		if file1 is not None:
-			preview=st.checkbox("Preview",key='preview2table')
-			df=None
-			if file1.name.lower().endswith("xls") or file1.name.lower().endswith("xlsx"):
-				df = pd.read_excel(file1)
-			else:
-				df=pd.read_csv(file1)
-			if preview:
-				st.markdown("""<hr style="height:10px;border:none;color:#333;background-color:#333;" /> """, unsafe_allow_html=True)
-				st.table(df)
-				st.markdown("""<hr style="height:10px;border:none;color:#333;background-color:#333;" /> """, unsafe_allow_html=True)
-
-			if not st.session_state.connected:
-				st.text_input(label="Table Name:",key="disabledTablename1",value="* Create Connection Before Continuing *",disabled=True)
-			else:
-				if not st.session_state.contextSet:
-					st.text_input(label="Table Name:",key="disabledTablename2",value="* Set Context Before Continuing *",disabled=True)
+			try:
+				preview=st.checkbox("Preview",key='preview2table')
+				df=None
+				if file1.name.lower().endswith("xls") or file1.name.lower().endswith("xlsx"):
+					df = pd.read_excel(file1)
 				else:
+					df=pd.read_csv(file1)
+				if preview:
+					st.markdown("""<hr style="height:10px;border:none;color:#333;background-color:#333;" /> """, unsafe_allow_html=True)
+					st.table(df)
+					st.markdown("""<hr style="height:10px;border:none;color:#333;background-color:#333;" /> """, unsafe_allow_html=True)
 
-					mapcolumns=st.checkbox("Tag Columns for Mapping",key='tagtable')
-					if mapcolumns:
-						st.markdown("""<hr style="height:10px;border:none;color:#333;background-color:#333;" /> """, unsafe_allow_html=True)
-						mapcol1, mapcol2 = st.columns(2)
-						with mapcol1:
-							st.write("Column1")
-
-						with mapcol2:
-							st.selectbox('TAG1','TAG2')
-						st.markdown("""<hr style="height:10px;border:none;color:#333;background-color:#333;" /> """, unsafe_allow_html=True)
-
-
-					tablemode = st.radio("Table Action:",('create', 'overwrite'))
-					if tablemode=='create':
-						tablename=st.text_input("Table Name:",st.session_state.table)
+				if not st.session_state.connected:
+					st.text_input(label="Table Name:",key="disabledTablename1",value="* Create Connection Before Continuing *",disabled=True)
+				else:
+					session.use_schema(st.session_state.schema)
+					if not st.session_state.contextSet:
+						st.text_input(label="Table Name:",key="disabledTablename2",value="* Set Context Before Continuing *",disabled=True)
 					else:
-						st.write("SELECTBOX HERE")
-						tablename="JUNK1"
-					if tablename:
-						if st.button("Load to Table"):
-							try:
-								session.use_schema(st.session_state.schema)
-								save2table = session.create_dataframe(df)
-								save2table.write.mode("overwrite").save_as_table(tablename)
-								msg="File Saved to Table: " + tablename
-								if mapcolumns:
-									associate_semantics(session, database+"."+schema+"."+tablename)
-									msg+=" & Column Mappings Tags Applied"
-								showStatusMsg(status,msg,True)
-								st.snow()
-							except Exception as e:
-								showStatusMsg(status,"Unable to Save File to Table: " + str(e),False)
+
+						mapcolumns=st.checkbox("Tag Columns for Mapping",key='tagtable')
+						if mapcolumns:
+							st.markdown("""<hr style="height:10px;border:none;color:#333;background-color:#333;" /> """, unsafe_allow_html=True)
+							mapcol1, mapcol2 = st.columns(2)
+							with mapcol1:
+								st.write("Column1")
+
+							with mapcol2:
+								st.selectbox('TAG1','TAG2')
+							st.markdown("""<hr style="height:10px;border:none;color:#333;background-color:#333;" /> """, unsafe_allow_html=True)
+
+
+						tablemode = st.radio("Table Action:",('create', 'overwrite'))
+						if tablemode=='create':
+							tablename=st.text_input("Table Name:",st.session_state.table)
+						else:
+							tables = session.sql("show tables").select('"name"').to_pandas()
+							tablename=st.selectbox("table:",pd.unique(tables['name']))
+						if tablename:
+							if st.button("Load to Table"):
+									save2table = session.create_dataframe(df)
+									save2table.write.mode("overwrite").save_as_table(tablename)
+									msg="File Saved to Table: " + tablename
+									if mapcolumns:
+										associate_semantics(session, database+"."+schema+"."+tablename)
+										msg+=" & Column Mappings Tags Applied"
+									showStatusMsg(status,msg,True)
+									st.snow()
+			except Exception as e:
+					showStatusMsg(status,"Unable to Save File to Table: " + str(e),False)
 
 	with tab2:
 		st.subheader("Upload File to Snowflake Stage")
@@ -194,7 +193,7 @@ def main():
 						if st.button("Upload to Stage"):
 							try:
 								session.use_schema(st.session_state.schema)
-								session.file.put(file2.getValue(), "@"+stagename)
+								session.file.put(file2.getvalue(), "@"+stagename)
 								showStatusMsg(status,msg,True)
 							except Exception as e:
 								showStatusMsg(status,"Unable to Save File to Stage: " + str(e),False)
@@ -208,10 +207,12 @@ def main():
 		st.write("Under Construction")
 
 	with tab5:
-		st.subheader("About")
-		st.write("Created by Snowflake")
-		st.write("Team #2")
+		st.subheader("Team #2")
+		#Raj Kanniyappan
+		st.write("Carter Faust, Michael Lazar, Steven Maser, Levi Pearce, Dirk Pluschke, JC Roboton, Irina Rubenchik, William Summerhill, Ben Weiss")
 		st.write("2022 TKO2 Hackathon")
+		st.write("Dallas, TX")
+		st.balloons()
 
 def associate_semantics(session,tblName):
 	resp='Your column has been classified.'
